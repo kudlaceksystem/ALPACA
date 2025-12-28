@@ -58,12 +58,16 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         ds.(nm) = dt.tblSetTimeZone(ds.(nm), "UTC");
     end
 
-    % Loop over label files
+    % Get channel names
+    channelNames = gd.dbfGetChannelNames(lblpn{1}, subjNmOrig);
+    
+    % Initialize variables for the loop over label files
     fprintf(['\nLabel File No. ', num2str(0, '%06d'), '/', num2str(numel(lblpn), '%06d'), '\n'])
-    clear prevEnd
     afterTimeChngTF = false;
     prevSigInfo = [];
     stdFileInt = hours(1);
+
+    % Loop over label files
     for klbl = 1 : numel(lblpn)
         % Progress display
         if rem(klbl, 20) == 0
@@ -72,49 +76,27 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
             fprintf('\n')
         end
         
+        % Load and cure the data
         ll = load(lblpn{klbl}); % Loaded label. All three variables from the label file will become fields of the ll structure
-
         % Keep only channels belonging to this animal
-        chToKeep = find(ll.sigInfo.Subject == string(subjNmOrig));
-        ll.sigInfo = ll.sigInfo(chToKeep, :);
-        ll.lblSet = ll.lblSet(ismember(ll.lblSet.Channel, chToKeep), :);
-        
+        ll = gd.dbfChannels(ll, subjNmOrig, channelNames);
         % Check consistenty of the input data
-        isConsistentTF = dt.checkDatetimeConsistency(lblpn, klbl, ll);
-        if ~isConsistentTF
-            warning('_jk Rows of sigInfo not consistent.')
-            pause
-        end
-        
+        dt.checkConsistency(lblpn, klbl, ll);
+        % Get datetimes to TimeZone where the data was recorded and then to UTC
         [ll, firstAftChngSub, firstAftChngStr, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
             dt.convertLblToUTC(stg, lblpn, klbl, ll, prevSigInfo, stdFileInt, afterTimeChngTF);
-        
         % Check if new file begins after the end of the previous file
         if exist('prevSigInfoUTC', 'var')
-            siginfoUTC_ = ll.sigInfo.SigStart;
-            prevsiginfoUTC_ = prevSigInfoUTC.SigEnd;
-            currentStartMinusPrevEnd = ll.sigInfo.SigStart(1) - prevSigInfoUTC.SigEnd(1);
-            if currentStartMinusPrevEnd < minutes(-40)
-                klbl_ = klbl
-                prev_lblpn_ = lblpn{klbl-1}
-                prevSigInfo_ = prevSigInfoUTC
-                prevTz_ = prevSigInfoUTC.SigStart.TimeZone
-                lblpn_klbl_ = lblpn{klbl}
-                thisSigInfo_ = ll.sigInfo
-                thisTz_ = ll.sigInfo.SigStart.TimeZone
-                currentStartMinusPrevEnd_ = currentStartMinusPrevEnd
-                warning('_jk Seeming file overlap.')
-                pause
-            end
+            dt.checkIfStartIsAfterPrevEnd(ll, prevSigInfoUTC, lblpn, klbl, 60)
         end
         prevSigInfoUTC = ll.sigInfo;
+        % End of curation and checks
         
         % Main loop
         for kn = 1 : numel(dsDesc.Name) % Over the names of the phenomena
             nm = dsDesc.Name(kn); % Name of the phenomenon we are now analyzing
             dd = dsDesc.(nm); % Data description (only for this phenomenon)
             % Initialize a new table which will be filled in and appended to the ds.(dsDesc.Name(kn)).
-
             numNewRows = sum(ismember(ll.lblSet.ClassName, dd(1).MainLbl)); % Number of rows (e.g. number of seizures in this label file)
             newRows = table('Size', [numNewRows, length(dd)], 'VariableTypes', [dd.VarType], 'VariableNames', [dd.VarName]); % Initialization of the table.
             newRows = dt.tblSetTimeZone(newRows, "UTC");
@@ -176,20 +158,22 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         end
     end
     
+
     %% Data to plot
     % Find out if we will need the signal files
     for knm = 1 : length(dpDesc.Name)
         lblOnlyTF(knm) = all([dpDesc.(dpDesc.Name(knm)).SrcData] == "Lbl");
     end
-    lblOnlyTF = all(lblOnlyTF);
+    dpLblOnlyTF = all(lblOnlyTF);
 
-    %% Which bin lengths are there in the dpDesc?
+    % Which bin lengths are there in the dpDesc?
     binlenAllDu = seconds(zeros(numel(dpDesc.Name), 1));
     for kn = 1 : numel(dpDesc.Name)
         binlenAllDu(kn) = dpDesc.(dpDesc.Name(kn))(1).BinLenDu;
     end
     binlenUnDu = unique(binlenAllDu);
     
+    % Over different bin lengths used
     for kbinlen = 1 : numel(binlenUnDu)
         % Split the time into bins
         binDt = (anStartDt : binlenUnDu(kbinlen) : anEndDt)'; % Edges of bins in datenum
@@ -201,7 +185,6 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
             dd = dpDesc.(nm); % Data description (only for this phenomenon)
             if dd(1).BinLenDu == binlenUnDu(kbinlen)
                 dp.(nm) = table('Size', [0, length(dd)], 'VariableTypes', [dd.VarType], 'VariableNames', [dd.VarName]); % Initialize with zero number of rows
-                dp.(nm) = dt.tblSetTimeZone(dp.(nm), stg.recTimeZoneStr);
                 dp.(nm) = dt.tblSetTimeZone(dp.(nm), "UTC");
             end
         end
@@ -210,6 +193,10 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         fprintf(['\nBin No. ', num2str(0, '%06d'), '/', num2str(numbin, '%06d'), '\n'])
         loadedLblpn = ""; % Keep track of the currently loaded label file
         loadedSnlpn = ""; % Keep track of the currently loaded signal file
+        clear prevSigInfoUTC
+        afterTimeChngTF = false;
+        prevSigInfo = [];
+        stdFileInt = hours(1);
         for kb = 1 : numbin % Loop over time blocks
             if rem(kb, 20) == 0
                 fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b')
@@ -242,44 +229,57 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                 if dd(1).BinLenDu == binlenUnDu(kbinlen)
                     numRows = numel(lblfSub); % Number of rows
                     binTables.(nm) = table('Size', [numRows, length(dd)], 'VariableTypes', [dd.VarType], 'VariableNames', [dd.VarName]); % Table of data from all files belonging to current time bin
-                    binTables.(nm) = dt.tblSetTimeZone(binTables.(nm), stg.recTimeZoneStr);
                     binTables.(nm) = dt.tblSetTimeZone(binTables.(nm), "UTC");
                 end
             end
-            
+
             % Get channel names
-            ll = load(lblpn{1}, 'sigInfo');
-            % Keep only channels belonging to this animal
-            chToKeep = find(ll.sigInfo.Subject == string(subjNmOrig));
-            ll.sigInfo = ll.sigInfo(chToKeep, :);
-            channelNames = ll.sigInfo.ChName;
-            clear ll
+            channelNames = gd.dbfGetChannelNames(lblpn{1}, subjNmOrig);
 
             % Loop over files within this block
             for klf = 1 : numel(lblfSub) % k-th label file (out of those relevant for this block)
                 if loadedLblpn ~= string(lblpn{lblfSub(klf)}) % Check if the required data file is already loaded. If not, load it.
                     ll = load(lblpn{lblfSub(klf)}, 'sigInfo', 'lblDef', 'lblSet');
-                    ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, stg.recTimeZoneStr);
-                    if diff(isdst(ll.sigInfo.SigStart(1), ll.sigInfo.SigStart(1) + hours(1)))
-                        ll.sigInfo
-                        warning('_jk Some problem with daylight saving time.')
-                        pause
-                    end
-                    ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, "UTC");
-                    ll.lblSet = dt.tblSetTimeZone(ll.lblSet, stg.recTimeZoneStr);
-                    ll.lblSet = dt.tblSetTimeZone(ll.lblSet, "UTC");
-
                     % Keep only channels belonging to this animal
-                    chToKeep = find(ll.sigInfo.Subject == string(subjNmOrig));
-                    ll.sigInfo = ll.sigInfo(chToKeep, :);
-                    ll.lblSet = ll.lblSet(ismember(ll.lblSet, chToKeep), :);
-                    % Check channel names
-                    if numel(ll.sigInfo.ChName) ~= numel(channelNames)
-                        error('_jk getData: Number of channels inconsistent.')
+                    ll = gd.dbfChannels(ll, subjNmOrig, channelNames);
+                    % Check consistenty of the input data
+                    dt.checkConsistency(lblpn, klf, ll);
+                    % Get datetimes to TimeZone where the data was recorded and then to UTC
+                    [ll, firstAftChngSub, firstAftChngStr, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
+                        dt.convertLblToUTC(stg, lblpn, klf, ll, prevSigInfo, stdFileInt, afterTimeChngTF);
+                    % Check if new file begins after the end of the previous file
+                    if exist('prevSigInfoUTC', 'var')
+                        dt.checkIfStartIsAfterPrevEnd(ll, prevSigInfoUTC, lblpn, klf, 60)
                     end
-                    if ~all(ll.sigInfo.ChName == channelNames)
-                        error('_jk getData: Channel order inconsistent.')
-                    end
+                    prevSigInfoUTC = ll.sigInfo;
+                    % End of curation and checks
+
+
+
+
+
+                    % % % % % % % % % % % % % % % % % % % % % % % 
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, stg.recTimeZoneStr);
+                    % % % % % % % % % % % % % % % % % % % % % % % if diff(isdst(ll.sigInfo.SigStart(1), ll.sigInfo.SigStart(1) + hours(1)))
+                    % % % % % % % % % % % % % % % % % % % % % % %     ll.sigInfo
+                    % % % % % % % % % % % % % % % % % % % % % % %     warning('_jk Some problem with daylight saving time.')
+                    % % % % % % % % % % % % % % % % % % % % % % %     pause
+                    % % % % % % % % % % % % % % % % % % % % % % % end
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, "UTC");
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = dt.tblSetTimeZone(ll.lblSet, stg.recTimeZoneStr);
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = dt.tblSetTimeZone(ll.lblSet, "UTC");
+                    % % % % % % % % % % % % % % % % % % % % % % % 
+                    % % % % % % % % % % % % % % % % % % % % % % % % Keep only channels belonging to this animal
+                    % % % % % % % % % % % % % % % % % % % % % % % chToKeep = find(ll.sigInfo.Subject == string(subjNmOrig));
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = ll.sigInfo(chToKeep, :);
+                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = ll.lblSet(ismember(ll.lblSet, chToKeep), :);
+                    % % % % % % % % % % % % % % % % % % % % % % % % Check channel names
+                    % % % % % % % % % % % % % % % % % % % % % % % if numel(ll.sigInfo.ChName) ~= numel(channelNames)
+                    % % % % % % % % % % % % % % % % % % % % % % %     error('_jk getData: Number of channels inconsistent.')
+                    % % % % % % % % % % % % % % % % % % % % % % % end
+                    % % % % % % % % % % % % % % % % % % % % % % % if ~all(ll.sigInfo.ChName == channelNames)
+                    % % % % % % % % % % % % % % % % % % % % % % %     error('_jk getData: Channel order inconsistent.')
+                    % % % % % % % % % % % % % % % % % % % % % % % end
                     % Update which file is currently loaded.
                     loadedLblpn = string(lblpn{lblfSub(klf)});
                 end
@@ -291,9 +291,9 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                     % Check if signal and label correspond
                     sigTbl = sigTbl(snlChToProcessSub, :);
                     sigInfo = sigInfo(snlChToProcessSub, :);
-                    if ~all(sigInfo.Subject == subjNm)
-                        error('_jk Inconsistency of subjects in label file.')
-                    end
+                    % % % % % % % % % % % % % % % if ~all(sigInfo.Subject == subjNm)
+                    % % % % % % % % % % % % % % %     error('_jk Inconsistency of subjects in label file.')
+                    % % % % % % % % % % % % % % % end
                     if ~all(sigTbl.Subject == subjNm)
                         error('_jk Inconsistency of subjects in signal file.')
                     end

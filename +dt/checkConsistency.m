@@ -1,4 +1,5 @@
-function isConsistentTF = checkDatetimeConsistency(lblpn, klbl, ll)
+function isConsistentTF = checkConsistency(lblpn, klbl, ll)
+    isConsistentTF = true;    
     % Check if sigInfo.FileName corresponds to file name
     fndattimStr = regexp(lblpn{klbl}, '\d\d\d\d\d\d_\d\d\d\d\d\d', 'match');
     filenameDt = datetime(fndattimStr{1}, 'InputFormat', 'yyMMdd_HHmmss');
