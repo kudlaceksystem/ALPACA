@@ -1,5 +1,5 @@
 function isConsistentTF = checkConsistency(lblpn, klbl, ll)
-    isConsistentTF = true;    
+    warning('on', 'all')
     % Check if sigInfo.FileName corresponds to file name
     fndattimStr = regexp(lblpn{klbl}, '\d\d\d\d\d\d_\d\d\d\d\d\d', 'match');
     filenameDt = datetime(fndattimStr{1}, 'InputFormat', 'yyMMdd_HHmmss');
@@ -7,11 +7,11 @@ function isConsistentTF = checkConsistency(lblpn, klbl, ll)
     filecontDt = datetime(fcdattimStr{1}, 'InputFormat', 'yyMMdd_HHmmss');
     filenameConsWithFilen = filenameDt == filecontDt;
     if ~filenameConsWithFilen
+        disp('_jk checkConsistency:')
         disp(klbl)
         disp(lblpn{klbl})
         disp(ll.sigInfo)
         warning('_jk File name and file contents do not correspond in terms of the date and time.')
-        pause
     end
     
     % Check if SigStart corresponds to file name
@@ -24,7 +24,9 @@ function isConsistentTF = checkConsistency(lblpn, klbl, ll)
         disp(lblpn{klbl})
         disp(ll.sigInfo)
         warning('_jk SigStart does not correspond to file name.')
-        pause
     end
     isConsistentTF = filenameConsWithFilen && sigStartConsWithFilen;
+    if ~isConsistentTF
+        pause
+    end
 end

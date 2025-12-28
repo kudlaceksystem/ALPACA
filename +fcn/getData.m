@@ -253,33 +253,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                     end
                     prevSigInfoUTC = ll.sigInfo;
                     % End of curation and checks
-
-
-
-
-
-                    % % % % % % % % % % % % % % % % % % % % % % % 
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, stg.recTimeZoneStr);
-                    % % % % % % % % % % % % % % % % % % % % % % % if diff(isdst(ll.sigInfo.SigStart(1), ll.sigInfo.SigStart(1) + hours(1)))
-                    % % % % % % % % % % % % % % % % % % % % % % %     ll.sigInfo
-                    % % % % % % % % % % % % % % % % % % % % % % %     warning('_jk Some problem with daylight saving time.')
-                    % % % % % % % % % % % % % % % % % % % % % % %     pause
-                    % % % % % % % % % % % % % % % % % % % % % % % end
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = dt.tblSetTimeZone(ll.sigInfo, "UTC");
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = dt.tblSetTimeZone(ll.lblSet, stg.recTimeZoneStr);
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = dt.tblSetTimeZone(ll.lblSet, "UTC");
-                    % % % % % % % % % % % % % % % % % % % % % % % 
-                    % % % % % % % % % % % % % % % % % % % % % % % % Keep only channels belonging to this animal
-                    % % % % % % % % % % % % % % % % % % % % % % % chToKeep = find(ll.sigInfo.Subject == string(subjNmOrig));
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.sigInfo = ll.sigInfo(chToKeep, :);
-                    % % % % % % % % % % % % % % % % % % % % % % % ll.lblSet = ll.lblSet(ismember(ll.lblSet, chToKeep), :);
-                    % % % % % % % % % % % % % % % % % % % % % % % % Check channel names
-                    % % % % % % % % % % % % % % % % % % % % % % % if numel(ll.sigInfo.ChName) ~= numel(channelNames)
-                    % % % % % % % % % % % % % % % % % % % % % % %     error('_jk getData: Number of channels inconsistent.')
-                    % % % % % % % % % % % % % % % % % % % % % % % end
-                    % % % % % % % % % % % % % % % % % % % % % % % if ~all(ll.sigInfo.ChName == channelNames)
-                    % % % % % % % % % % % % % % % % % % % % % % %     error('_jk getData: Channel order inconsistent.')
-                    % % % % % % % % % % % % % % % % % % % % % % % end
+                    
                     % Update which file is currently loaded.
                     loadedLblpn = string(lblpn{lblfSub(klf)});
                 end
@@ -380,7 +354,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                                 warning('on', 'MATLAB:table:RowsAddedExistingVars')
                         end
                     end
-                    validS = binTableFinal.(nm).ValidS
+                    validS = binTableFinal.(nm).ValidS;
                     if validS > seconds(dpDesc.(nm)(1).BinLenDu)
                         y
                         validS
