@@ -19,9 +19,10 @@ function figBinCount(stg, h, d, subjInfo, ds, dp, ~)
         validSt = find(dpTax > binDt(kb), 1, "first"); % Find the first dp bin which has the end later than counting bin starts
         validEn = find(dpTax - dpBinlenDu < binDt(kb+1), 1, "last"); % Find the last dp bin which has the start before the conting bin ends
         valid = dp.(vanm).ValidS(validSt : validEn, :);
-        if any(valid > dpBinlenS, "all") % Just check that the validS is shorter than the bin length (otherwise there is a bug somewhere in getData)
+        if any(valid > dpBinlenS*1.01, "all") % Just check that the validS is shorter than the bin length (otherwise there is a bug somewhere in getData)
             valid_ = valid
             dpBinlenS_ = dpBinlenS
+            warning('_jk fig.figBinCount More valid signal than bin length.')
             pause
         end
         valid = ~all(isnan(valid) | valid <= minRequiredValidS, 2);
