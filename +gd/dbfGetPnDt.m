@@ -1,10 +1,28 @@
-function [pn, Dt, N] = dbfGetPnDt(stg, p)
+function [pn, Dt] = dbfGetPnDt(stg, p)
     % Get file path, name, start date in datetime and datenum
     d = dir([p, '\*.mat']);
     n = {d.name}';
     pn = fullfile(p, n);
-    N = cellfun(@(x) datenum(regexp(x, '\d\d\d\d\d\d_\d\d\d\d\d\d', 'match'), 'yymmdd_HHMMSS'), n, 'UniformOutput', true); %#ok<DATNM>
     Dt = cellfun(@(x) datetime(regexp(x, '\d\d\d\d\d\d_\d\d\d\d\d\d', 'match'), 'InputFormat', 'yyMMdd_HHmmss'), n, 'UniformOutput', true);
     Dt.TimeZone = stg.timeZoneStr;
+
+    whichAreAmbiguous = [];
+    for kdt = 1 : numel(Dt)
+        if dt.dtIsAmbiguous(Dt(kdt))
+            whichAreAmbiguous = [whichAreAmbiguous, kdt]; %#ok<AGROW>
+        end
+    end
+    ambDt = Dt(whichAreAmbiguous);
+    dAmbDt = diff(ambDt);
+    standardFileInterval = Dt(whichAreAmbiguous(1)) - Dt(whichAreAmbiguous(1) - 1);
+    lastBeforeTimeChange = find(dAmbDt < 0.5*standardFileInterval); % Last one before the time change
+    whichToAdjust = whichAreAmbiguous(1) : whichAreAmbiguous(1) + lastBeforeTimeChange - 1;
+    
     Dt.TimeZone = "UTC";
+    Dt(whichToAdjust) = Dt(whichToAdjust) - hours(1);
+
+    if ~all(diff(Dt) > 0)
+        warning('_jk gd.dbfGetPnDt File datetimes are not strictly increasing.');
+        pause
+    end
 end

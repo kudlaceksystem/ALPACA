@@ -177,6 +177,7 @@ function [clust, eventBelongsToClust, stats] = getClusters(subjInfo, ds, dp, cld
     clNesTbl =  ...
         table('Size', [0, 5], 'VariableNames', ["Edge", "OnOff", "ClSub", "Dur", "Nes"], ... % Edge (i.e. onset or offset of a cluster), 1 for onset and -1 for offset, subscript, duration of the cluster, nestedness
         'VariableTypes', ["datetime", "double", "double", "duration", "double"]); % Using doubles is not computationally optimal but it makes the rest of the code easy to write the difference in the performance is negligible
+    clNesTbl.Edge.TimeZone = "UTC";
     for k = 1 : length(clust)
         warning('off', 'MATLAB:table:RowsAddedExistingVars')
         clNesTbl.Edge(2*(k-1) + 1) = clust(k).OnsDt(1); % Onset of the first seizure in the cluster
