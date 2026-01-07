@@ -62,17 +62,17 @@ global stg % TODO005 get rid of global variables
 
 %% Select subjects
 subjList = {...
-    % 'BH002390';
-        'CO006701';
+        'BH002390';
+        'CO006701'
         % 'CO006705'
 };
 path0 = '\\neurodata\Lab Neurophysiology root\EEG conversion\'; % With '\' at the end
 path1 = {
     '';
-    % ''
+    ''
 };
 subjToPlot = {
-        % 'BH002390';
+        'BH002390';
         'CO006701';
         % 'CO006705'
 };
@@ -82,7 +82,7 @@ pathEeg3 = {
 };
 pathLbl3 = {
     'Label';
-    % 'Label'
+    'Label'
 };
 
 

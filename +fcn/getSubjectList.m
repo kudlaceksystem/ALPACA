@@ -21,7 +21,7 @@ function dobTable = getSubjectList(stg, dobpn)
         Subject(k, 1) = string(videoEEGdata.Mouse{k});
         r = regexp(videoEEGdata.Birth(k), '\d\d\d\d-\d\d-\d\d', 'match');
         if ~isempty(r{1})
-            dt = datetime(r{1}, 'InputFormat', 'uuuu-MM-dd', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.timeZoneStr);
+            dt = datetime(r{1}, 'InputFormat', 'uuuu-MM-dd', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.recTimeZoneStr);
             dt.TimeZone = "UTC";
             if year(dt) < 1000
                 dt.Year = dt.Year + 2000;
@@ -30,7 +30,7 @@ function dobTable = getSubjectList(stg, dobpn)
         
         r = regexp(videoEEGdata.Birth(k), '\d+-...-\d+', 'match');
         if ~isempty(r{1})
-            dt = datetime(r{1}, 'InputFormat', 'dd-MMM-yyyy', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.timeZoneStr);
+            dt = datetime(r{1}, 'InputFormat', 'dd-MMM-yyyy', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.recTimeZoneStr);
             dt.TimeZone = "UTC";
             if year(dt) < 1000
                 dt.Year = dt.Year + 2000;
@@ -39,7 +39,7 @@ function dobTable = getSubjectList(stg, dobpn)
         
         r = regexp(videoEEGdata.Birth(k), '\d+\.\d+\.\d+', 'match');
         if ~isempty(r{1})
-            dt = datetime(r{1}, 'InputFormat', 'dd.MM.uuuu', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.timeZoneStr);
+            dt = datetime(r{1}, 'InputFormat', 'dd.MM.uuuu', 'Format', 'uuuu-MM-dd', 'TimeZone', stg.recTimeZoneStr);
             dt.TimeZone = "UTC";
             if year(dt) < 1000
                 dt.Year = dt.Year + 2000;
