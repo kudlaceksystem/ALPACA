@@ -1,7 +1,4 @@
 function h = prepareFigures(stg, h, figDesc)
-stg
-h
-figDesc
     for kfig = 1 : numel(figDesc.ToPlot)
         fd = figDesc.(figDesc.ToPlot(kfig));
         nm = fd.Name;

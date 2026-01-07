@@ -1,5 +1,6 @@
 function figBinCount(stg, h, d, subjInfo, ds, dp, ~)
     histEdges = 0 : 30;
+    discreteHistogramTF = true;
     nm = d.Name;
     evnm = d.EventName; % Name of the event to analyze
     vanm = d.EventValidSrc; % Name of the dp field to get the data on validity of the source data
@@ -20,8 +21,10 @@ function figBinCount(stg, h, d, subjInfo, ds, dp, ~)
         validEn = find(dpTax - dpBinlenDu < binDt(kb+1), 1, "last"); % Find the last dp bin which has the start before the conting bin ends
         valid = dp.(vanm).ValidS(validSt : validEn, :);
         if any(valid > dpBinlenS*1.01, "all") % Just check that the validS is shorter than the bin length (otherwise there is a bug somewhere in getData)
-            valid_ = valid
-            dpBinlenS_ = dpBinlenS
+            disp('valid = ')
+            disp(valid)
+            disp('dpBinelnS = ')
+            disp(dpBinlenS)
             warning('_jk fig.figBinCount More valid signal than bin length.')
             pause
         end
@@ -47,47 +50,20 @@ function figBinCount(stg, h, d, subjInfo, ds, dp, ~)
     h.f.(nm).Units = "centimeters";
     h.a.(nm)(subjInfo.ksubj, 1) = axes("Units", "centimeters", "Position", ...
         [spx(mod(subjInfo.ksubj - 1, numc) + 1), spy(ceil(subjInfo.ksubj/numc)), spWi, spHe], "NextPlot", "add");
-    
-    x = histEdges; % X data common for polynomial fitting and plotting
-    x = repelem(x, 3);
-    x = x(2 : end-1);
-    y = NaN(size(x));
-    y(1 : 3 : end) = 0;
-    y(2 : 3 : end) = hcNorm;
-    y(3 : 3 : end) = hcNorm;
-    facecolor = 1 - 0.2*(1 - stg.subjColor(subjInfo.ksubj, :));
-    h.p.(nm)(subjInfo.ksubj, 1) = patch(x, y, facecolor, 'LineWidth', 0.5, 'EdgeColor', 'k');
+    if discreteHistogramTF
+        x = histEdges(1 : end -1);
+        y = hcNorm;
+        h.p.(nm)(subjInfo.ksubj, 1) = stem(x, y, 'Color', stg.subjColor(subjInfo.ksubj, :), 'LineWidth', 1);
+    else
+        x = histEdges; %#ok<UNRCH> % X data common for polynomial fitting and plotting
+        x = repelem(x, 3);
+        x = x(2 : end-1);
+        y = NaN(size(x));
+        y(1 : 3 : end) = 0;
+        y(2 : 3 : end) = hcNorm;
+        y(3 : 3 : end) = hcNorm;
+        facecolor = 1 - 0.2*(1 - stg.subjColor(subjInfo.ksubj, :));
+        h.p.(nm)(subjInfo.ksubj, 1) = patch(x, y, facecolor, 'LineWidth', 0.5, 'EdgeColor', 'k');
+    end
     clear x y
-
-    % % % onsD = days(ds.(evnm).OnsDt - subjInfo.dob);
-    % % % x = rem(onsD, 1)*24;
-    % % % y = floor(onsD);
-    % % % ymi = min(y);
-    % % % yma = max(y);
-    % % % % Night time shading
-    % % % patch([0 6 6 0], [ymi - 1, ymi - 1, yma + 1, yma + 1], 0.92*[1 1 1], 'EdgeColor', 'none');
-    % % % hold on
-    % % % patch([18 24 24 18], [ymi - 1, ymi - 1, yma + 1, yma + 1], 0.92*[1 1 1], 'EdgeColor', 'none');
-    % % % % % % scatter(x, y, 5*ones(size(x)), 'k', 'Marker', 'o', 'MarkerFaceColor', 'k')
-    % % % scatter(x, y, 5*ones(size(x)), 'filled', 'MarkerEdgeColor', stg.subjColor(subjInfo.ksubj, :), 'MarkerFaceColor', stg.subjColor(subjInfo.ksubj, :))
-    
-    % % % % % Dropouts
-    % % % % for kpa = 1 : size(drop, 2)
-    % % % %     patch([0 24 24 0], [drop(1, kpa), drop(1, kpa), drop(2, kpa), drop(2, kpa)], 'k', 'EdgeColor', 'none')
-    % % % % end
-    % % % %     h.a.(nm)(subjInfo.ksubj).XLim = [0 24];
-    % % % %     h.a.(nm)(subjInfo.ksubj).YLim = [ymi - 1, yma + 1];
-    % % % %     h.a.(nm)(subjInfo.ksubj).XTick = [0 12 24];
-    % % % %     h.a.(nm)(subjInfo.ksubj).Box = stg.box;
-    % % % %     if subjInfo.ksubj > stg.numSubj - stg.sbNCol
-    % % % %         xlabel('Time of day (hours)')
-    % % % %     end
-    % % % %     if mod(subjInfo.ksubj - 1, stg.sbNCol) == 0
-    % % % %         ylabel('Age (days)')
-    % % % %     end
-    % % % %     title(subjInfo.subjNm, 'Interpreter', 'none', 'Color', 'k', 'FontWeight', 'bold');
-    % % % %     % title(subjInfo.subjNm, 'Interpreter', 'none', 'Color', stg.subjColor(ksubj, :), 'FontWeight', 'bold');
-    % % % %     % title(['Mouse ', num2str(ksubj)], 'Interpreter', 'none', 'Color', 'k', 'FontWeight', 'bold');
-    % % % %     h.a.(nm)(subjInfo.ksubj, 1).FontSize = stg.axFontSize;
-    % % % %     h.a.(nm)(subjInfo.ksubj, 1).Layer = 'top';
 end

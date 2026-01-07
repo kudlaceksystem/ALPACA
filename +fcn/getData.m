@@ -11,25 +11,31 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
     % % % % % % % global stg
     
     %% NEEDS REWRITING If the data for this subject already exist load it
-    % if exist([stg.dataFolder, 'Data-', num2str(seconds(dpDesc.BinLenDu)), '-', char(subjNmOrig), '.mat'], 'file')
-    %     load([stg.dataFolder, 'Data-', num2str(seconds(dpDesc.BinLenDu)), '-', char(subjNmOrig), '.mat'],...
-    %         'subjInfo', 'szCharTbl', 'szCharLabel', 'siCharTbl', 'siCharLabel')
-    %     stg.szCharYLbl = szCharLabel;
-    %     stg.siCharYLbl = siCharLabel;
-    %     stg.saCharYLbl = [szCharLabel, siCharLabel];
-    %     stg.ssCharYLbl = [siCharLabel, siCharLabel];
-    %     if isa(subjInfo.dob, 'table')
-    %         subjInfo.dob = datenum(subjInfo.dob{1, 1});
-    %     end
-    %     subjInfo.subjNmOrig = subjInfo.subjNm;
-    %     if ~stg.keepOriginalSubjectName
-    %         subjInfo.subjNmOrig = subjInfo.subjNm;
-    %         subjInfo.subjNm = ['Mouse', num2str(stg.subjNumber(ksubj), '%02d')];
-    %     end
-    %     subjInfo.sex = dobTable{ksubj, 3};
-    %     return
-    % end
-
+    datan = "Data" + subjNmOrig + ".mat";
+    datap = stg.dataFolder;
+    datapn = fullfile(datap, datan);
+    if exist(datapn, 'file')
+        l = load(datapn);
+        subjInfo = l.subjInfo; % Extract subject information from loaded data
+        ds = l.ds; % Load the data structure
+        dp = l.dp; % Load the plot data structure
+        if isfield(l, 'dsDesc')
+            if ~helper.structCompare(dsDesc, l.dsDesc)
+                disp(subjInfo)
+                warning('_jk getData Loaded dsDesc different from input argument dsDesc')
+                pause
+            end
+        end
+        if isfield(l, 'dpDesc')
+            if ~helper.structCompare(dpDesc, l.dpDesc)
+                disp(subjInfo)
+                warning('_jk getData Loaded dpDesc different from input argument dpDesc')
+                pause
+            end
+        end
+        return
+    end
+    
     % Find out if we will need signal data (as of now, the function is prepared for labels only)
     for knm = 1 : length(dsDesc.Name)
         lblOnlyTF(knm) = all([dsDesc.(dsDesc.Name(knm)).SrcData] == "Lbl");
@@ -83,7 +89,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         % Check consistenty of the input data
         dt.checkConsistency(lblpn, klbl, ll);
         % Get datetimes to TimeZone where the data was recorded and then to UTC
-        [ll, firstAftChngSub, firstAftChngStr, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
+        [ll, ~, ~, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
             dt.convertLblToUTC(stg, lblpn, klbl, ll, prevSigInfo, stdFileInt, afterTimeChngTF);
         % Check if new file begins after the end of the previous file
         if exist('prevSigInfoUTC', 'var')
@@ -192,7 +198,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         % Loop over time bins. For each bin, it will load all the files it needs and another loop.
         fprintf(['\nBin No. ', num2str(0, '%06d'), '/', num2str(numbin, '%06d'), '\n'])
         loadedLblpn = ""; % Keep track of the currently loaded label file
-        loadedSnlpn = ""; % Keep track of the currently loaded signal file
+        % loadedSnlpn = ""; % Keep track of the currently loaded signal file
         clear prevSigInfoUTC
         afterTimeChngTF = false;
         prevSigInfo = [];
@@ -246,7 +252,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                     % Check consistenty of the input data
                     dt.checkConsistency(lblpn, lblfSub(klf), ll);
                     % Get datetimes to TimeZone where the data was recorded and then to UTC
-                    [ll, firstAftChngSub, firstAftChngStr, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
+                    [ll, ~, ~, prevSigInfo, stdFileInt, afterTimeChngTF] = ...
                         dt.convertLblToUTC(stg, lblpn, lblfSub(klf), ll, prevSigInfo, stdFileInt, afterTimeChngTF);
                     % Check if new file begins after the end of the previous file
                     if exist('prevSigInfoUTC', 'var')
@@ -344,7 +350,7 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
                                 end
                             case "bin"
                                 funcHandle = str2func(d.CalcFcn);
-                                numch = height(ll.sigInfo); % Number of channels
+                                % % % % % % % % % % % % % numch = height(ll.sigInfo); % Number of channels
                                 warning('off', 'MATLAB:table:RowsAddedExistingVars')
                                 y = funcHandle(binTables, nm); % Each cell of the table can contain either a scalar or a row vector (if there are more channels)
                                 binTableFinal.(nm).(colnm)(1, 1 : numel(y)) = y;
@@ -395,7 +401,10 @@ function [subjInfo, ds, dp] = getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable,
         subjInfo.subjNm = ['Mouse', num2str(stg.subjNumber(ksubj), '%02d')];
     end
     %% Saving of the ds and dp structures not sorted out yet
-% % % %     save([stg.dataFolder, 'Data-', num2str(stg.dpBinLenS), '-', char(subjNmOrig), '.mat'], 'subjInfo', 'szCharTbl', 'szCharLabel', 'siCharTbl', 'siCharLabel')
+    if ~exist(datap, 'dir')
+        mkdir(datap);
+    end
+    save(datapn, 'subjInfo', 'ds', 'dp', 'dsDesc', 'dpDesc')
     
     %% Nested functions - possibly put them also in +gd?
     % % % % % % % % function [subjNm, anStartDt, anEndDt, chName] = getSubjInfo(stg, lblpn, subjNmOrig, varargin)

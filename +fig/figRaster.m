@@ -1,4 +1,4 @@
-function figRaster(stg, h, d, subjInfo, ds, dp, clust)
+function h = figRaster(stg, h, d, subjInfo, ds, dp, clust)
     arguments (Input)
         stg % structure, global settings
         h % structure, graphics handles
@@ -9,11 +9,11 @@ function figRaster(stg, h, d, subjInfo, ds, dp, clust)
         clust % struct with clusters
     end
     arguments (Output)
+        h
     end
-
+    
     nm = d.Name;
-    figure(h.f.(nm))
-
+    figure(h.f.(nm));
     if ~isfield(h.a, nm)
         h.a.(nm) = axes('Units', stg.units, 'Position', [3, 1, d.PositionCm(3) - 3.5, d.PositionCm(4) - 1.5]);
     end
@@ -28,23 +28,40 @@ function figRaster(stg, h, d, subjInfo, ds, dp, clust)
     % Events
     numev = numel(ds.(d.EventName).OnsDt);
     x = days(ds.(d.EventName).OnsDt - subjInfo.dob); % X data common for polynomial fitting and plotting
-    
     x = repelem(x, 3);
-    y1 = zeros(numev, 1);
+    yBase = zeros(numev, 1) + (stg.numSubj - subjInfo.ksubj)*2 + 0.5;
+
+    yData = ones(size(yBase));
+    if isfield(d, 'EventChar')
+        if ismember(d.EventChar, ds.(d.EventName).Properties.VariableNames)
+            yData = ds.(d.EventName).(d.EventChar);
+            if class(yData) == "duration"
+                yData = seconds(yData);
+            end
+            yData = yData/max(yData);
+        end
+    end
     y = NaN(3*numev, 1);
-    y(1 : 3 : 3*numev) = y1 + (stg.numSubj - subjInfo.ksubj)*2 + 0.5;
-    y(2 : 3 : 3*numev) = y1 + (stg.numSubj - subjInfo.ksubj)*2 + 1.5;
+    y(1 : 3 : 3*numev) = yBase;
+    y(2 : 3 : 3*numev) = yBase + yData;
     y(3 : 3 : 3*numev) = NaN(numev, 1);
     h.p.(nm)(subjInfo.ksubj, 2) = plot(x, y, 'Marker', 'none', 'LineWidth', 0.5, 'Color', stg.subjColor(subjInfo.ksubj, :));
     clear x y
-    
-    % Clusters
-    for kcl = 1 : numel(clust)
-        x(1) = days(clust(kcl).OnsDt(1) - subjInfo.dob);
-        x(2) = days(clust(kcl).OnsDt(end) - subjInfo.dob);
-        yOffset = (clust(kcl).nested)*0.2;
-        y = [1 1]*((stg.numSubj - subjInfo.ksubj)*2 + 0.5 + yOffset);
-        h.p.(nm)(subjInfo.ksubj, 3, kcl) = plot(x, y, 'Marker', '.', 'MarkerSize', 4, 'LineWidth', 1.5, 'Color', 'k');
+
+    % Clusters    
+    if isfield(d, 'showClustersTF')
+        showClustersTF = d.showClustersTF;
+    else
+        showClustersTF = true;
+    end
+    if showClustersTF
+        for kcl = 1 : numel(clust)
+            x(1) = days(clust(kcl).OnsDt(1) - subjInfo.dob);
+            x(2) = days(clust(kcl).OnsDt(end) - subjInfo.dob);
+            yOffset = (clust(kcl).nested)*0.2;
+            y = [1 1]*((stg.numSubj - subjInfo.ksubj)*2 + 0.5 + yOffset);
+            h.p.(nm)(subjInfo.ksubj, 3, kcl) = plot(x, y, 'Marker', '.', 'MarkerSize', 4, 'LineWidth', 1.5, 'Color', 'k');
+        end
     end
     
     xlabel('Age (days)')
@@ -60,4 +77,5 @@ function figRaster(stg, h, d, subjInfo, ds, dp, clust)
     h.a.(nm).YLim = [0, (stg.numSubj - 1)*2 + 1.5; ];
     h.a.(nm).Box = 'off';
     h.a.(nm).Units = 'normalized';
+    h.a.(nm).NextPlot = 'add';
 end

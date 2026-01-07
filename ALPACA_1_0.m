@@ -62,6 +62,7 @@ global stg % TODO005 get rid of global variables
 
 %% Select subjects
 subjList = {...
+        'SK000918';
         'BH002390';
         'CO006701'
         % 'CO006705'
@@ -69,9 +70,11 @@ subjList = {...
 path0 = '\\neurodata\Lab Neurophysiology root\EEG conversion\'; % With '\' at the end
 path1 = {
     '';
+    '';
     ''
 };
 subjToPlot = {
+        'SK000918';
         'BH002390';
         'CO006701';
         % 'CO006705'
@@ -81,6 +84,7 @@ pathEeg3 = {
     ''
 };
 pathLbl3 = {
+    'label';
     'Label';
     'Label'
 };
@@ -237,37 +241,40 @@ stg.margGlobSlopeBox = [0 0 0 0];
 stg.margSlopeBox = [0.15 0.1 0.1 0.3];
 
 % List the figures you wish to plot
+% figDesc.Name    = ["SzRaster"; "SzKaroly"; "SzBinCount"]; % All figures that are defined
+% figDesc.ToPlot  = ["SzRaster"; "SzKaroly"; "SzBinCount"]; % Figures we want to plot now
 figDesc.Name    = ["SzRaster"; "SzKaroly"; "SzBinCount"];
-figDesc.ToPlot  = ["SzRaster"; "SzKaroly"; "SzBinCount"];
+figDesc.ToPlot  = ["SzRaster"];
 
 % SzRaster
 kfig = 1;
-d.Name          = figDesc.Name(kfig);
-d.FigFcn        = "fig.figRaster"; % Function to use
-d.EventName     = "Seizure"; % Phenomenon to stem
-d.EventChar     = "DurDu"; % Characteristic to display as the height of the stems
-d.EventValidSrc = "Seizure21600";
-d.PositionCm    = [5, 5, stg.figWidth2Cm, stg.numSubj*0.7 + 1.5]; % Position in centimeters
+d.Name              = figDesc.Name(kfig);
+d.FigFcn            = "fig.figRaster"; % Function to use
+d.EventName         = "Seizure"; % Phenomenon to stem
+d.EventChar         = "DurDu"; % Characteristic to display as the height of the stems
+d.EventValidSrc     = "Seizure21600";
+d.PositionCm        = [5, 5, stg.figWidth2Cm, stg.numSubj*0.7 + 1.5]; % Position in centimeters
+d.showClustersTF    = false;
 figDesc.(figDesc.Name(kfig)) = d;
 clear d
 
 % SzKaroly
 kfig = kfig + 1;
-d.Name          = figDesc.Name(kfig);
-d.FigFcn        = "fig.figKaroly"; % Function to use
-d.EventName     = "Seizure"; % Phenomenon to stem
-d.EventValidSrc = "Seizure21600";
-d.subplotHeCm   = 5;
+d.Name              = figDesc.Name(kfig);
+d.FigFcn            = "fig.figKaroly"; % Function to use
+d.EventName         = "Seizure"; % Phenomenon to stem
+d.EventValidSrc     = "Seizure21600";
+d.subplotHeCm       = 5;
 figDesc.(figDesc.Name(kfig)) = d;
 clear d
 
-% SzKaroly
+% SzBinCount
 kfig = kfig + 1;
-d.Name          = figDesc.Name(kfig);
-d.FigFcn        = "fig.figBinCount"; % Function to use
-d.EventName     = "Seizure"; % Phenomenon to stem
-d.EventValidSrc = "Seizure21600";
-d.subplotHeCm   = 5;
+d.Name              = figDesc.Name(kfig);
+d.FigFcn            = "fig.figBinCount"; % Function to use
+d.EventName         = "Seizure"; % Phenomenon to stem
+d.EventValidSrc     = "Seizure21600";
+d.subplotHeCm       = 5;
 figDesc.(figDesc.Name(kfig)) = d;
 clear d
 
@@ -287,7 +294,7 @@ stg.uniformSubjectColor = [0.8 0.1 0.1];
 fcn.getSubjAndSubjClr(subjToPlot, subjList, colorfulSubjects);
 
 % General
-stg.dataFolder = 'DataEmgNotExcluded/';
+stg.dataFolder = 'Data260107/';
 stg.removeEmgContaminatedTF = false;
 stg.keepOriginalSubjectName = true;
 stg.numEegCh = 4; % Number of EEG channels (other channels may be analysis results)
@@ -401,13 +408,13 @@ if analyzeIndividualSubjects % If you have all the subject data in RAM, you may 
         [subjInfo, ds, dp] = fcn.getData(stg, dsDesc, dpDesc, lblp, snlp, dobTable, ksubj, subjToPlot{ksubj}); % Subject info, seizure properties table, signal characteristics table, signal characteristics y-axis labels
         [clust, szBelongsToClust, clustStats] = fcn.getClusters(subjInfo, ds, dp, clDesc(1), ksubj);
         %% TODO004 DO SUBJECT STATS LATER
-        subjectStats(stg, subjInfo, ds, dp, clustStats)
+        subjectStats(stg, subjInfo, ds, dp, clustStats);
         subjStats(ksubj, :) = subjectStats(stg, subjInfo, ds, dp, clustStats); %#ok<SAGROW>
-
+        
         for kfig = 1 : numel(figDesc.ToPlot)
             d = figDesc.(figDesc.ToPlot(kfig));
             funcHandle = str2func(d.FigFcn); % Get function handle from the name of the function.
-            funcHandle(stg, h, d, subjInfo, ds, dp, clust)
+            h = funcHandle(stg, h, d, subjInfo, ds, dp, clust);
         end
         % % % % Seizure occurrence analysis
         % % % [szRate, szRateBinlen] = plotSzRate(subjInfo, szCharTbl, siCharTbl, ksubj); % szRate and binlen are used in the plotSzPsd function
